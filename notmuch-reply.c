@@ -267,8 +267,7 @@ add_recipients_from_message (GMimeMessage *reply,
     } reply_to_map[] = {
 	{ "reply-to", "from", GMIME_RECIPIENT_TYPE_TO  },
 	{ "to",         NULL, GMIME_RECIPIENT_TYPE_TO  },
-	{ "cc",         NULL, GMIME_RECIPIENT_TYPE_CC  },
-	{ "bcc",        NULL, GMIME_RECIPIENT_TYPE_BCC }
+	{ "cc",         NULL, GMIME_RECIPIENT_TYPE_CC  }
     };
     const char *from_addr = NULL;
     unsigned int i;
@@ -481,9 +480,6 @@ notmuch_reply_format_default(void *ctx, notmuch_config_t *config, notmuch_query_
 	g_mime_object_set_header (GMIME_OBJECT (reply),
 				  "From", from_addr);
 
-	g_mime_object_set_header (GMIME_OBJECT (reply), "Bcc",
-			   notmuch_config_get_user_primary_email (config));
-
 	in_reply_to = talloc_asprintf (ctx, "<%s>",
 			     notmuch_message_get_message_id (message));
 
@@ -557,9 +553,6 @@ notmuch_reply_format_headers_only(void *ctx, notmuch_config_t *config, notmuch_q
 				  "References", references);
 
 	(void)add_recipients_from_message (reply, config, message);
-
-	g_mime_object_set_header (GMIME_OBJECT (reply), "Bcc",
-			   notmuch_config_get_user_primary_email (config));
 
 	reply_headers = g_mime_object_to_string (GMIME_OBJECT (reply));
 	printf ("%s", reply_headers);
