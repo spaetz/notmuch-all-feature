@@ -496,6 +496,37 @@ _notmuch_database_ensure_writable (notmuch_database_t *notmuch)
     return NOTMUCH_STATUS_SUCCESS;
 }
 
+struct MaildateValueRangeProcessor : public Xapian::ValueRangeProcessor {
+    MaildateValueRangeProcessor() {}
+
+    Xapian::valueno operator()(std::string &begin, std::string &end) {
+      time_t begin_first,begin_last, end_first, end_last;
+      int retval;
+
+      if (begin.substr(0, 5) != "date:")
+	 return Xapian::BAD_VALUENO;
+      begin.erase(0, 5);
+
+      retval = notmuch_parse_date(begin.c_str(), &begin_first, &begin_last, 0);
+
+      if (retval == NOTMUCH_STATUS_INVALID_DATE) {
+	fprintf(stderr,"Begin date failed to parse: %s",begin.c_str());
+	return Xapian::BAD_VALUENO;
+      }
+
+      retval = notmuch_parse_date(end.c_str(),&end_first,&end_last,begin_first);
+      if (retval == NOTMUCH_STATUS_INVALID_DATE) {
+	fprintf(stderr,"End date failed to parse: %s",end.c_str());
+	return Xapian::BAD_VALUENO;
+      }
+
+      begin.assign(Xapian::sortable_serialise(begin_first));
+      end.assign(Xapian::sortable_serialise(end_last));
+
+      return NOTMUCH_VALUE_TIMESTAMP;
+    }
+};
+
 notmuch_database_t *
 notmuch_database_open (const char *path,
 		       notmuch_database_mode_t mode)
@@ -588,7 +619,7 @@ notmuch_database_open (const char *path,
 	notmuch->query_parser = new Xapian::QueryParser;
 	notmuch->term_gen = new Xapian::TermGenerator;
 	notmuch->term_gen->set_stemmer (Xapian::Stem ("english"));
-	notmuch->value_range_processor = new Xapian::NumberValueRangeProcessor (NOTMUCH_VALUE_TIMESTAMP);
+	notmuch->value_range_processor = new MaildateValueRangeProcessor();
 
 	notmuch->query_parser->set_default_op (Xapian::Query::OP_AND);
 	notmuch->query_parser->set_database (*notmuch->xapian_db);

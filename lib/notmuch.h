@@ -1089,6 +1089,23 @@ notmuch_filenames_advance (notmuch_filenames_t *filenames);
 void
 notmuch_filenames_destroy (notmuch_filenames_t *filenames);
 
+notmuch_status_t
+notmuch_parse_date(const char *text, time_t *first, time_t *last, time_t after);
+/* Parse a string into the first and last possible timestamps.
+ * It parses the possible formats and stops if one pattern matches.
+ * Keywords: 'today','yesterday','thisweek','lastweek','thismonth',
+ *           'lastmonth'
+ * Month-day : month[-day]] (month: January, Jan, or 1)\n"
+ * ISO format: year[-month[-day]]
+ * US format : month[/day[/year]]
+ *
+ * 'after' is used to fill in bits from context if left out, e.g. a
+ * 'date:2004..01' will find from 2004-01-01 through 2004-01-31
+ *
+ * Return values:
+ * NOTMUCH_STATUS_SUCCESS
+ * NOTMUCH_STATUS_INVALID_DATE: Error parsing the date string
+ */
 NOTMUCH_END_DECLS
 
 #endif
