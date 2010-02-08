@@ -219,6 +219,8 @@ notmuch_status_to_string (notmuch_status_t status)
 	return "Erroneous NULL pointer";
     case NOTMUCH_STATUS_TAG_TOO_LONG:
 	return "Tag value is too long (exceeds NOTMUCH_TAG_MAX)";
+    case NOTMUCH_STATUS_INVALID_DATE:
+	return "Date value did not parse to a valid date";
     case NOTMUCH_STATUS_UNBALANCED_FREEZE_THAW:
 	return "Unbalanced number of calls to notmuch_message_freeze/thaw";
     default:

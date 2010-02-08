@@ -431,6 +431,7 @@ add_files_recursive (notmuch_database_t *notmuch,
 	    ret = status;
 	    goto DONE;
 	default:
+	case NOTMUCH_STATUS_INVALID_DATE:
 	case NOTMUCH_STATUS_FILE_ERROR:
 	case NOTMUCH_STATUS_NULL_POINTER:
 	case NOTMUCH_STATUS_TAG_TOO_LONG:

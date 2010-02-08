@@ -78,6 +78,8 @@ typedef int notmuch_bool_t;
  * NOTMUCH_STATUS_TAG_TOO_LONG: A tag value is too long (exceeds
  *	NOTMUCH_TAG_MAX)
  *
+ * NOTMUCH_STATUS_INVALID_DATE: Date parsing failed
+ *
  * NOTMUCH_STATUS_UNBALANCED_FREEZE_THAW: The notmuch_message_thaw
  *	function has been called more times than notmuch_message_freeze.
  *
@@ -96,6 +98,7 @@ typedef enum _notmuch_status {
     NOTMUCH_STATUS_DUPLICATE_MESSAGE_ID,
     NOTMUCH_STATUS_NULL_POINTER,
     NOTMUCH_STATUS_TAG_TOO_LONG,
+    NOTMUCH_STATUS_INVALID_DATE,
     NOTMUCH_STATUS_UNBALANCED_FREEZE_THAW,
 
     NOTMUCH_STATUS_LAST_STATUS
