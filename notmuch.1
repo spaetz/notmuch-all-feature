@@ -438,17 +438,30 @@ expression).
 Finally, results can be restricted to only messages within a
 particular time range, (based on the Date: header) with a syntax of:
 
-	<intial-timestamp>..<final-timestamp>
+	date:<startdate>..<enddate>
 
-Each timestamp is a number representing the number of seconds since
-1970-01-01 00:00:00 UTC. This is not the most convenient means of
-expressing date ranges, but until notmuch is fixed to accept a more
-convenient form, one can use the date program to construct
-timestamps. For example, with the bash shell the folowing syntax would
-specify a date range to return messages from 2009-10-01 until the
-current time:
+A
+.B date
+can be specified in various formats. It parses the formats in this order and stops if one pattern matches:
+
+	Keywords:
+.B today,
+.B yesterday,
+.B thisweek,
+.B lastweek,
+.B thismonth,
+.B lastmonth.
+
+	Month-day: month[-day]] (month: "January", "Jan", 1)
+
+	ISO format: year[-month[-day]]
+
+	US format : month[/day[/year]]
+
+The date parser will try to fill in bits in the enddate from context if left out, e.g. a 'date:2004..01' will find from 2004-01-01 through 2004-01-31.
 
 	$(date +%s -d 2009-10-01)..$(date +%s)
+
 .SH ENVIRONMENT
 The following environment variables can be used to control the
 behavior of notmuch.

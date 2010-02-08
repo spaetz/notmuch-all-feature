@@ -92,19 +92,21 @@ static const char search_terms_help[] =
     "\t\tmarks around any parenthesized expression).\n"
     "\n"
     "\t\tFinally, results can be restricted to only messages within a\n"
-    "\t\tparticular time range, (based on the Date: header) with:\n"
+    "\t\tparticular time range, (based on the Date: header) with a\n"
+    "\t\tsyntax of: date:<startdate>..<enddate>\n"
     "\n"
-    "\t\t\t<intial-timestamp>..<final-timestamp>\n"
+    "\t\tIt can be specified in the following formats, parsing will \n"
+    "\t\tstop if the first pattern matches:\n"
+    "\t\tKeywords: 'today','yesterday','thisweek','lastweek',\n"
+    "\t\t'thismonth', 'lastmonth'. \n"
+    "\t\tmonth-day : month[-day]] (month: January, Jan, or 1)\n"
+    "\t\tISO format: year[-month[-day]] (month: January, Jan, or 1)\n"
+    "\t\tUS format : month[/day[/year]]\n"
     "\n"
-    "\t\tEach timestamp is a number representing the number of seconds\n"
-    "\t\tsince 1970-01-01 00:00:00 UTC. This is not the most convenient\n"
-    "\t\tmeans of expressing date ranges, but until notmuch is fixed to\n"
-    "\t\taccept a more convenient form, one can use the date program to\n"
-    "\t\tconstruct timestamps. For example, with the bash shell the\n"
-    "\t\tfollowing syntax would specify a date range to return messages\n"
-    "\t\tfrom 2009-10-01 until the current time:\n"
-    "\n"
-    "\t\t\t$(date +%%s -d 2009-10-01)..$(date +%%s)\n\n";
+    "\t\tThe parser will fill in bits in the enddate from context if\n"
+    "\t\tleft out, e.g. a 'date:2004..01' will find from 2004-01-01\n"
+    "\t\tthrough 2004-01-31\n"
+    "\n\n";
 
 command_t commands[] = {
     { "setup", notmuch_setup_command,
