@@ -813,14 +813,16 @@ is what to put on the button."
 	(let* ((sig-start (match-beginning 0))
 	       (sig-end (match-end 0))
 	       (sig-lines (1- (count-lines sig-start end))))
-	  (if (<= sig-lines notmuch-show-signature-lines-max)
-	      (notmuch-show-region-to-button
-	       sig-start
-	       end
-	       "signature"
-	       indent
-	       (format notmuch-show-signature-button-format sig-lines)
-	       ))))))
+    (if (<= sig-lines notmuch-show-signature-lines-max)
+      (progn
+        (overlay-put (make-overlay sig-start end) 'face 'message-cited-text-face)
+        (notmuch-show-region-to-button
+         sig-start
+         end
+         "signature"
+         indent
+         (format notmuch-show-signature-button-format sig-lines)
+         )))))))
 
 (defun notmuch-show-markup-part (beg end depth)
   (if (re-search-forward notmuch-show-part-begin-regexp nil t)
