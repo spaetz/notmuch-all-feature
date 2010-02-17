@@ -126,10 +126,20 @@ Can use up to one integer format parameter, i.e. %d")
   "Maximum length of signature that will be hidden by default.")
 
 (defvar notmuch-show-citation-lines-prefix 4
-  "Always show at least this many lines of a citation.
+  "Always show at least this many lines at the start of a citation.
 
-If there is one more line, show that, otherwise collapse
-remaining lines into a button.")
+If there is one more line than the sum of
+`notmuch-show-citation-lines-prefix' and
+`notmuch-show-citation-lines-suffix', show that, otherwise
+collapse remaining lines into a button.")
+
+(defvar notmuch-show-citation-lines-suffix 0
+  "Always show at least this many lines at the end of a citation.
+
+If there is one more line than the sum of
+`notmuch-show-citation-lines-prefix' and
+`notmuch-show-citation-lines-suffix', show that, otherwise
+collapse remaining lines into a button.")
 
 (defvar notmuch-command "notmuch"
   "Command to run the notmuch binary.")
@@ -720,7 +730,7 @@ which this thread was originally shown."
 (define-button-type 'notmuch-button-invisibility-toggle-type
   'action 'notmuch-toggle-invisible-action
   'follow-link t
-  'face 'font-lock-comment-face)
+  'face 'font-lock-comment-delimiter-face)
 (define-button-type 'notmuch-button-citation-toggle-type 'help-echo "mouse-1, RET: Show citation"
   :supertype 'notmuch-button-invisibility-toggle-type)
 (define-button-type 'notmuch-button-signature-toggle-type 'help-echo "mouse-1, RET: Show signature"
@@ -784,16 +794,20 @@ is what to put on the button."
       (let* ((cite-start (match-beginning 0))
 	     (cite-end 	(match-end 0))
 	     (cite-lines (count-lines cite-start cite-end)))
-	(when (> cite-lines (1+ notmuch-show-citation-lines-prefix))
+	(overlay-put (make-overlay cite-start cite-end) 'face 'message-cited-text-face)
+	(when (> cite-lines (1+ (+ notmuch-show-citation-lines-prefix notmuch-show-citation-lines-suffix)))
 	  (goto-char cite-start)
 	  (forward-line notmuch-show-citation-lines-prefix)
-	  (notmuch-show-region-to-button
-	   (point) cite-end
-	   "citation"
-	   indent
-	   (format notmuch-show-citation-button-format
-		   (- cite-lines notmuch-show-citation-lines-prefix))
-	   ))))
+	  (let ((hidden-start (point)))
+	    (goto-char cite-end)
+	    (forward-line (- notmuch-show-citation-lines-suffix))
+	    (notmuch-show-region-to-button
+	     hidden-start (point)
+	     "citation"
+	     indent
+	     (format notmuch-show-citation-button-format
+		     (- cite-lines notmuch-show-citation-lines-prefix notmuch-show-citation-lines-suffix))
+	     )))))
     (if (and (< (point) end)
 	     (re-search-forward signature-regexp end t))
 	(let* ((sig-start (match-beginning 0))
