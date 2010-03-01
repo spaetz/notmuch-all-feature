@@ -41,6 +41,7 @@ typedef struct {
     int total_files;
     int processed_files;
     int added_messages;
+    notmuch_bool_t tag_maildir;
     struct timeval tv_start;
 
     _filename_list_t *removed_files;
@@ -162,6 +163,60 @@ _entries_resemble_maildir (struct dirent **entries, int count)
     }
 
     return 0;
+}
+
+/* Tag new mail according to its Maildir attribute flags.
+ *
+ * Test if the mail file's filename contains any of the
+ * standard Maildir attributes, and translate these to
+ * the corresponding standard notmuch tags.
+ *
+ * If the message is not marked as 'seen', or if no
+ * flags are present, tag as 'inbox, unread'.
+ */
+static void
+derive_tags_from_maildir_flags (notmuch_message_t *message,
+                           const char * path)
+{
+    int seen = FALSE;
+    int end_of_flags = FALSE;
+    size_t l = strlen(path);
+
+    /* Non-experimental message flags start with this */
+    char * i = strstr(path, ":2,");
+    i = (i) ? i : strstr(path, "!2,"); /* This format is used on VFAT */
+    if (i != NULL) {
+   i += 3;
+   for (; i < (path + l) && !end_of_flags; i++) {
+       switch (*i) {
+       case 'F' :
+           notmuch_message_add_tag (message, "maildir::flagged");
+           break;
+       case 'R': /* replied */
+           notmuch_message_add_tag (message, "maildir::replied");
+           break;
+       case 'D':
+           notmuch_message_add_tag (message, "maildir::draft");
+           break;
+       case 'S': /* seen */
+           seen = TRUE;
+           break;
+       case 'T': /* trashed */
+           notmuch_message_add_tag (message, "maildir::trashed");
+           break;
+       case 'P': /* passed */
+           notmuch_message_add_tag (message, "maildir::forwarded");
+           break;
+       default:
+           end_of_flags = TRUE;
+           break;
+       }
+   }
+    }
+
+    if (i == NULL || !seen) {
+        notmuch_message_add_tag (message, "unread");
+    }
 }
 
 /* Examine 'path' recursively as follows:
@@ -295,6 +350,8 @@ add_files_recursive (notmuch_database_t *notmuch,
 	    strcmp (entry->d_name, ".notmuch") ==0)
 	{
 	    continue;
+	} else {
+	    state->tag_maildir = TRUE;
 	}
 
 	next = talloc_asprintf (notmuch, "%s/%s", path, entry->d_name);
@@ -410,6 +467,10 @@ add_files_recursive (notmuch_database_t *notmuch,
 	    state->added_messages++;
 	    for (tag=state->new_tags; *tag != NULL; tag++)
 	        notmuch_message_add_tag (message, *tag);
+	    if (state->tag_maildir) {
+	      derive_tags_from_maildir_flags (message,
+					      entry->d_name);
+	    }
 	    break;
 	/* Non-fatal issues (go on to next file) */
 	case NOTMUCH_STATUS_DUPLICATE_MESSAGE_ID:
