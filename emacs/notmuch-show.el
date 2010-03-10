@@ -63,7 +63,8 @@
     (define-key map "s" 'notmuch-search)
     (define-key map "m" 'message-mail)
     (define-key map "f" 'notmuch-show-forward-current)
-    (define-key map "r" 'notmuch-show-reply)
+    (define-key map "r" 'notmuch-show-reply-all)
+    (define-key map "R" 'notmuch-show-reply)
     (define-key map "|" 'notmuch-show-pipe-message)
     (define-key map "w" 'notmuch-show-save-attachments)
     (define-key map "V" 'notmuch-show-view-raw-message)
@@ -370,7 +371,25 @@ buffer."
       mm-handle (> (notmuch-count-attachments mm-handle) 1))))
   (message "Done"))
 
+(defun notmuch-recipient-reply (recipient query-string)
+  (switch-to-buffer (generate-new-buffer "notmuch-draft"))
+  (call-process notmuch-command nil t nil "reply"
+		(concat "--recipient=" recipient) query-string)
+  (message-insert-signature)
+  (goto-char (point-min))
+  (if (re-search-forward "^$" nil t)
+      (progn
+	(insert "--text follows this line--")
+	(forward-line)))
+  (message-mode))
+
 (defun notmuch-show-reply ()
+  "Begin composing a reply to the current message in a new buffer."
+  (interactive)
+  (let ((message-id (notmuch-show-get-message-id)))
+    (notmuch-recipient-reply "sender" message-id)))
+
+(defun notmuch-show-reply-all ()
   "Begin composing a reply to the current message in a new buffer."
   (interactive)
   (let ((message-id (notmuch-show-get-message-id)))
