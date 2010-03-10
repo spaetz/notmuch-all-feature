@@ -73,6 +73,8 @@
 #define STRNCMP_LITERAL(var, literal) \
     strncmp ((var), (literal), sizeof (literal) - 1)
 
+#define NOTMUCH_REPLY_ALL   0x1
+#define NOTMUCH_REPLY_SENDER_ONLY 0x2
 static inline void
 chomp_newline (char *str)
 {

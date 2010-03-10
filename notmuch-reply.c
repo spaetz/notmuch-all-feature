@@ -252,20 +252,37 @@ reply_to_header_is_redundant (notmuch_message_t *message)
 static const char *
 add_recipients_from_message (GMimeMessage *reply,
 			     notmuch_config_t *config,
-			     notmuch_message_t *message)
+			     notmuch_message_t *message,
+			     int reply_options)
 {
-    struct {
+    struct reply_to_map {
 	const char *header;
 	const char *fallback;
 	GMimeRecipientType recipient_type;
-    } reply_to_map[] = {
+    } ;
+    const char *from_addr = NULL;
+    unsigned int i;
+    struct reply_to_map *reply_to_map;
+
+    struct reply_to_map reply_to_map_all[] = {
 	{ "reply-to", "from", GMIME_RECIPIENT_TYPE_TO  },
 	{ "to",         NULL, GMIME_RECIPIENT_TYPE_TO  },
 	{ "cc",         NULL, GMIME_RECIPIENT_TYPE_CC  },
-	{ "bcc",        NULL, GMIME_RECIPIENT_TYPE_BCC }
+	{ "bcc",        NULL, GMIME_RECIPIENT_TYPE_BCC },
+	{  NULL,        NULL, 0 }
     };
-    const char *from_addr = NULL;
-    unsigned int i;
+
+    /* we try from first and then reply-to */
+    struct reply_to_map reply_to_map_sender[] = {
+	{ "from", "reply-to", GMIME_RECIPIENT_TYPE_TO  },
+	{  NULL,        NULL, 0 }
+    };
+
+    if (reply_options == NOTMUCH_REPLY_SENDER_ONLY) {
+	reply_to_map = reply_to_map_sender;
+    } else {
+	reply_to_map = reply_to_map_all;
+    }
 
     /* Some mailing lists munge the Reply-To header despite it being A Bad
      * Thing, see http://www.unicom.com/pw/reply-to-harmful.html
@@ -283,7 +300,7 @@ add_recipients_from_message (GMimeMessage *reply,
 	reply_to_map[0].fallback = NULL;
     }
 
-    for (i = 0; i < ARRAY_SIZE (reply_to_map); i++) {
+    for (i = 0; reply_to_map[i].header; i++) {
 	const char *addr, *recipients;
 
 	recipients = notmuch_message_get_header (message,
@@ -365,7 +382,7 @@ guess_from_received_header (notmuch_config_t *config, notmuch_message_t *message
 }
 
 static int
-notmuch_reply_format_default(void *ctx, notmuch_config_t *config, notmuch_query_t *query)
+notmuch_reply_format_default(void *ctx, notmuch_config_t *config, notmuch_query_t *query, int reply_options)
 {
     GMimeMessage *reply;
     notmuch_messages_t *messages;
@@ -391,7 +408,7 @@ notmuch_reply_format_default(void *ctx, notmuch_config_t *config, notmuch_query_
 	    subject = talloc_asprintf (ctx, "Re: %s", subject);
 	g_mime_message_set_subject (reply, subject);
 
-	from_addr = add_recipients_from_message (reply, config, message);
+	from_addr = add_recipients_from_message (reply, config, message, reply_options);
 
 	if (from_addr == NULL)
 	    from_addr = guess_from_received_header (config, message);
@@ -440,7 +457,7 @@ notmuch_reply_format_default(void *ctx, notmuch_config_t *config, notmuch_query_
 
 /* This format is currently tuned for a git send-email --notmuch hook */
 static int
-notmuch_reply_format_headers_only(void *ctx, notmuch_config_t *config, notmuch_query_t *query)
+notmuch_reply_format_headers_only(void *ctx, notmuch_config_t *config, notmuch_query_t *query, int reply_options)
 {
     GMimeMessage *reply;
     notmuch_messages_t *messages;
@@ -480,7 +497,7 @@ notmuch_reply_format_headers_only(void *ctx, notmuch_config_t *config, notmuch_q
 	g_mime_object_set_header (GMIME_OBJECT (reply),
 				  "References", references);
 
-	(void)add_recipients_from_message (reply, config, message);
+	(void)add_recipients_from_message (reply, config, message, reply_options);
 
 	g_mime_object_set_header (GMIME_OBJECT (reply), "Bcc",
 			   notmuch_config_get_user_primary_email (config));
@@ -504,8 +521,8 @@ notmuch_reply_command (void *ctx, int argc, char *argv[])
     notmuch_database_t *notmuch;
     notmuch_query_t *query;
     char *opt, *query_string;
-    int i, ret = 0;
-    int (*reply_format_func)(void *ctx, notmuch_config_t *config, notmuch_query_t *query);
+    int i, ret = 0, reply_to = NOTMUCH_REPLY_ALL;
+    int (*reply_format_func)(void *ctx, notmuch_config_t *config, notmuch_query_t *query, int reply_options);
 
     reply_format_func = notmuch_reply_format_default;
 
@@ -522,6 +539,16 @@ notmuch_reply_command (void *ctx, int argc, char *argv[])
 		reply_format_func = notmuch_reply_format_headers_only;
 	    } else {
 		fprintf (stderr, "Invalid value for --format: %s\n", opt);
+		return 1;
+	    }
+	} else if (STRNCMP_LITERAL (argv[i], "--recipient=") == 0) {
+	    opt = argv[i] + sizeof ("--recipient=") - 1;
+	    if (strcmp (opt, "all") == 0) {
+		reply_to = NOTMUCH_REPLY_ALL;
+	    } else if (strcmp (opt, "sender") == 0) {
+		reply_to = NOTMUCH_REPLY_SENDER_ONLY;
+	    } else {
+		fprintf (stderr, "Invalid value for --recipient: %s\n", opt);
 		return 1;
 	    }
 	} else {
@@ -559,7 +586,7 @@ notmuch_reply_command (void *ctx, int argc, char *argv[])
 	return 1;
     }
 
-    if (reply_format_func (ctx, config, query) != 0)
+    if (reply_format_func (ctx, config, query, reply_to) != 0)
 	return 1;
 
     notmuch_query_destroy (query);
