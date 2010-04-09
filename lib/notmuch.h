@@ -269,6 +269,7 @@ notmuch_database_get_directory (notmuch_database_t *database,
 notmuch_status_t
 notmuch_database_add_message (notmuch_database_t *database,
 			      const char *filename,
+			      const char *folder_name,
 			      notmuch_message_t **message);
 
 /* Remove a message from the given notmuch database.
