@@ -21,6 +21,7 @@
 #include "notmuch-client.h"
 
 #include <unistd.h>
+#include <glib.h>
 
 typedef struct _filename_node {
     char *filename;
@@ -164,6 +165,35 @@ _entries_resemble_maildir (struct dirent **entries, int count)
     return 0;
 }
 
+static char*
+_get_folder_base_name(const char *path)
+{
+  gchar *full_folder_name = NULL;
+  gchar *folder_base_name = NULL;
+
+  /* Find name of "folder" containing the email. */
+  full_folder_name = g_strdup(path);
+  while (1) {
+    folder_base_name = g_path_get_basename(full_folder_name);
+
+    if (strcmp(folder_base_name, "cur") == 0
+	|| strcmp(folder_base_name, "new") == 0) {
+      gchar *parent_name = g_path_get_dirname(full_folder_name);
+      g_free(full_folder_name);
+      full_folder_name = parent_name;
+    } else
+      break;
+  }
+
+  g_free(full_folder_name);
+
+  if (strcmp(folder_base_name, ".") == 0) {
+    g_free(folder_base_name);
+    folder_base_name = NULL;
+  }
+  return folder_base_name;
+}
+
 /* Examine 'path' recursively as follows:
  *
  *   o Ask the filesystem for the mtime of 'path' (fs_mtime)
@@ -218,6 +248,7 @@ add_files_recursive (notmuch_database_t *notmuch,
     struct stat st;
     notmuch_bool_t is_maildir, new_directory;
     const char **tag;
+    char *folder_base_name = NULL;
 
     if (stat (path, &st)) {
 	fprintf (stderr, "Error reading directory %s: %s\n",
@@ -403,7 +434,10 @@ add_files_recursive (notmuch_database_t *notmuch,
 	    fflush (stdout);
 	}
 
-	status = notmuch_database_add_message (notmuch, next, &message);
+	folder_base_name = _get_folder_base_name(path);
+	status = notmuch_database_add_message (notmuch, next,
+					       folder_base_name,
+					       &message);
 	switch (status) {
 	/* success */
 	case NOTMUCH_STATUS_SUCCESS:
@@ -499,7 +533,8 @@ add_files_recursive (notmuch_database_t *notmuch,
 	notmuch_filenames_destroy (db_files);
     if (directory)
 	notmuch_directory_destroy (directory);
-
+    if (folder_base_name)
+	g_free(folder_base_name);
     return ret;
 }
 
