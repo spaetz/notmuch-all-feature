@@ -372,7 +372,6 @@ notmuch_reply_format_default(void *ctx, notmuch_config_t *config, notmuch_query_
     notmuch_message_t *message;
     const char *subject, *from_addr = NULL, *short_from;
     const char *in_reply_to, *orig_references, *references;
-    char *reply_headers;
     time_t date;
     struct tm *datetm;
     char *datestr, *angle;
