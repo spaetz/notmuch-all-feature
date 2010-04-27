@@ -212,6 +212,7 @@ For a mouse binding, return nil."
     (define-key map "f" 'notmuch-search-filter)
     (define-key map [mouse-1] 'notmuch-search-show-thread)
     (define-key map "*" 'notmuch-search-operate-all)
+    (define-key map "d" 'notmuch-search-delete-thread)
     (define-key map "a" 'notmuch-search-archive-thread)
     (define-key map "-" 'notmuch-search-remove-tag)
     (define-key map "+" 'notmuch-search-add-tag)
@@ -509,6 +510,15 @@ thread or threads in the current region."
 	       (end (region-end)))
 	  (notmuch-search-remove-tag-region tag beg end))
       (notmuch-search-remove-tag-thread tag))))
+
+(defun notmuch-search-delete-thread ()
+  "Delete the currently selected thread (add a \"deleted\" tag).
+
+This function advances the next thread when finished."
+  (interactive)
+  (notmuch-search-add-tag "deleted")
+  (forward-line)
+  (notmuch-search-refresh-view))
 
 (defun notmuch-search-archive-thread ()
   "Archive the currently selected thread (remove its \"inbox\" tag).
