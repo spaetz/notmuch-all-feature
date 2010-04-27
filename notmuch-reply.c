@@ -443,8 +443,11 @@ notmuch_reply_format_default(void *ctx, notmuch_config_t *config, notmuch_query_
     GMimeMessage *reply;
     notmuch_messages_t *messages;
     notmuch_message_t *message;
-    const char *subject, *from_addr = NULL;
+    const char *subject, *from_addr = NULL, *short_from;
     const char *in_reply_to, *orig_references, *references;
+    time_t date;
+    struct tm *datetm;
+    char *datestr, *angle;
 
     for (messages = notmuch_query_search_messages (query);
 	 notmuch_messages_valid (messages);
@@ -499,9 +502,28 @@ notmuch_reply_format_default(void *ctx, notmuch_config_t *config, notmuch_query_
 	g_object_unref (G_OBJECT (reply));
 	reply = NULL;
 
+	date = notmuch_message_get_date(message);
+	datetm = gmtime( &date );
+	datestr = talloc_array(ctx, char, 11);
+	strftime(datestr, 11, "%Y-%m-%d", datetm);
+
+	/* If from contains '<' (not as first char), only use the
+	 * preceding real name without "" (if present). */
+	short_from = notmuch_message_get_header (message, "from");
+	if ((angle = strchr(short_from, '<')) > short_from) {
+	    while (angle-1 >= short_from && *(angle-1) == ' ')
+		angle--;
+	    *angle = '\0';
+	    if (*short_from == '"' && *(angle-1) == '"' &&
+		angle-1 > short_from) {
+		short_from++;
+		*(angle-1) = '\0';
+	    }
+	}
+
 	printf ("On %s, %s wrote:\n",
-		notmuch_message_get_header (message, "date"),
-		notmuch_message_get_header (message, "from"));
+		datestr,
+		short_from);
 
 	show_message_body (notmuch_message_get_filename (message), reply_part);
 
