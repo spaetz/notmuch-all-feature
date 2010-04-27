@@ -85,9 +85,9 @@ typedef struct {
  *	MESSAGE_ID:	The unique ID of the mail mess (see "id" above)
  *
  * In addition, terms from the content of the message are added with
- * "from", "to", "attachment", and "subject" prefixes for use by the
- * user in searching. But the database doesn't really care itself
- * about any of these.
+ * "from", "to", "attachment", "subject" and "folder" prefixes for use
+ * by the user in searching. But the database doesn't really care
+ * itself about any of these.
  *
  * The data portion of a mail document is empty.
  *
@@ -199,7 +199,8 @@ prefix_t PROBABILISTIC_PREFIX[]= {
     { "from",			"XFROM" },
     { "to",			"XTO" },
     { "attachment",		"XATTACHMENT" },
-    { "subject",		"XSUBJECT"}
+    { "subject",		"XSUBJECT"},
+    { "folder", 		"XFOLDER"}
 };
 
 int
@@ -1482,6 +1483,7 @@ _notmuch_database_link_message (notmuch_database_t *notmuch,
 notmuch_status_t
 notmuch_database_add_message (notmuch_database_t *notmuch,
 			      const char *filename,
+			      const char *folder_name,
 			      notmuch_message_t **message_ret)
 {
     notmuch_message_file_t *message_file;
@@ -1596,6 +1598,9 @@ notmuch_database_add_message (notmuch_database_t *notmuch,
 
 	    date = notmuch_message_file_get_header (message_file, "date");
 	    _notmuch_message_set_date (message, date);
+
+	    if (folder_name != NULL)
+		_notmuch_message_gen_terms (message, "folder", folder_name);
 
 	    _notmuch_message_index_file (message, filename);
 	} else {
