@@ -118,23 +118,24 @@
   (+ (/ dividend divisor)
      (if (> (% dividend divisor) 0) 1 0)))
 
-(defun notmuch-hello-reflect (list width)
-  "Reflect a `width' wide matrix represented by `list' along the
+(defun notmuch-hello-reflect-generate-row (ncols nrows row list)
+  (let ((len (length list)))
+    (loop for col from 0 to (- ncols 1)
+	  collect (let ((offset (+ (* nrows col) row)))
+		    (if (< offset len)
+			(nth offset list)
+		      ;; Don't forget to insert an empty slot in the
+		      ;; output matrix if there is no corresponding
+		      ;; value in the input matrix.
+		      nil)))))
+
+(defun notmuch-hello-reflect (list ncols)
+  "Reflect a `ncols' wide matrix represented by `list' along the
 diagonal."
   ;; Not very lispy...
-  (let* ((len (length list))
-	 (nrows (notmuch-hello-roundup len width)))
+  (let ((nrows (notmuch-hello-roundup (length list) ncols)))
     (loop for row from 0 to (- nrows 1)
-	  append (loop for col from 0 to (- width 1)
-		       ;; How could we calculate the offset just once
-		       ;; per inner-loop?
-		       if (< (+ (* nrows col) row) len)
-		       collect (nth (+ (* nrows col) row) list)
-		       else
-		       ;; Don't forget to insert an empty slot in the
-		       ;; output matrix if there is no corresponding
-		       ;; value in the input matrix.
-		       collect nil))))
+	  append (notmuch-hello-reflect-generate-row ncols nrows row list))))
 
 (defun notmuch-hello-widget-search (widget &rest ignore)
   (notmuch-search (widget-get widget
@@ -148,8 +149,9 @@ diagonal."
 (defun notmuch-hello-insert-tags (tag-alist widest target)
   (let* ((tags-per-line (max 1
 			     (/ (- (window-width) notmuch-hello-indent)
-				;; Count is 7 wide, 1 for the space
-				;; after the name.
+				;; Count is 7 wide (6 digits plus
+				;; space), 1 for the space after the
+				;; name.
 				(+ 7 1 widest))))
 	 (count 0)
 	 (reordered-list (notmuch-hello-reflect tag-alist tags-per-line))
@@ -159,21 +161,30 @@ diagonal."
 	 (found-target-pos nil))
     ;; dme: It feels as though there should be a better way to
     ;; implement this loop than using an incrementing counter.
-    (loop for elem in reordered-list
-	  do (progn
-	       ;; (not elem) indicates an empty slot in the matrix.
-	       (when elem
-		 (widget-insert (format "%6s " (notmuch-saved-search-count (cdr elem))))
-		 (if (string= (format "%s " (car elem)) target)
-		     (setq found-target-pos (point-marker)))
-		 (widget-create 'push-button
-				:notify #'notmuch-hello-widget-search
-				:notmuch-search-terms (cdr elem)
-				(format "%s " (car elem)))
-		 (insert (make-string (1+ (- widest (length (car elem)))) ? )))
-	       (setq count (1+ count))
-	       (if (eq (% count tags-per-line) 0)
-		   (widget-insert "\n"))))
+    (mapc (lambda (elem)
+	    ;; (not elem) indicates an empty slot in the matrix.
+	    (when elem
+	      (let* ((name (car elem))
+		     (query (cdr elem))
+		     (formatted-name (format "%s " name)))
+		(widget-insert (format "%6s " (notmuch-saved-search-count query)))
+		(if (string= formatted-name target)
+		    (setq found-target-pos (point-marker)))
+		(widget-create 'push-button
+			       :notify #'notmuch-hello-widget-search
+			       :notmuch-search-terms query
+			       formatted-name)
+		;; Insert enough space to consume the rest of the
+		;; column.  Because the button for the name is `(1+
+		;; (length name))' long (due to the trailing space) we
+		;; can just insert `(- widest (length name))' spaces -
+		;; the column separator is included in the button if
+		;; `(equal widest (length name)'.
+		(widget-insert (make-string (- widest (length name)) ? ))))
+	    (setq count (1+ count))
+	    (if (eq (% count tags-per-line) 0)
+		(widget-insert "\n")))
+	  reordered-list)
 
     ;; If the last line was not full (and hence did not include a
     ;; carriage return), insert one now.
@@ -274,8 +285,9 @@ diagonal."
 		      if (> (string-to-number (notmuch-saved-search-count (cdr elem))) 0)
 		      collect elem)))
 	     (saved-widest (notmuch-hello-longest-label saved-alist))
-	     (alltags-alist (mapcar '(lambda (tag) (cons tag (concat "tag:" tag)))
-				    (process-lines notmuch-command "search-tags")))
+	     (alltags-alist (if notmuch-show-all-tags-list
+				(mapcar '(lambda (tag) (cons tag (concat "tag:" tag)))
+					(process-lines notmuch-command "search-tags"))))
 	     (alltags-widest (notmuch-hello-longest-label alltags-alist))
 	     (widest (max saved-widest alltags-widest)))
 
@@ -350,26 +362,27 @@ diagonal."
 	    (indent-rigidly start (point) notmuch-hello-indent)))
 
 	(when alltags-alist
-	  (if notmuch-show-all-tags-list
-	      (progn
-		(widget-insert "\nAll tags: ")
-		(widget-create 'push-button
-			       :notify (lambda (widget &rest ignore)
-					 (setq notmuch-show-all-tags-list nil)
-					 (notmuch-hello-update))
-			       "hide")
-		(widget-insert "\n\n")
-		(let ((start (point)))
-		  (setq found-target-pos (notmuch-hello-insert-tags alltags-alist widest target))
-		  (if (not final-target-pos)
-		      (setq final-target-pos found-target-pos))
-		  (indent-rigidly start (point) notmuch-hello-indent)))
-	    (widget-insert "\n")
+	  (widget-insert "\nAll tags: ")
+	  (widget-create 'push-button
+			 :notify (lambda (widget &rest ignore)
+				   (setq notmuch-show-all-tags-list nil)
+				   (notmuch-hello-update))
+			 "hide")
+	  (widget-insert "\n\n")
+	  (let ((start (point)))
+	    (setq found-target-pos (notmuch-hello-insert-tags alltags-alist widest target))
+	    (if (not final-target-pos)
+		(setq final-target-pos found-target-pos))
+	    (indent-rigidly start (point) notmuch-hello-indent)))
+
+	(widget-insert "\n")
+
+	(if (not notmuch-show-all-tags-list)
 	    (widget-create 'push-button
 			   :notify (lambda (widget &rest ignore)
 				     (setq notmuch-show-all-tags-list t)
 				     (notmuch-hello-update))
-			   "Show all tags"))))
+			   "Show all tags")))
 
       (let ((start (point)))
 	(widget-insert "\n\n")
