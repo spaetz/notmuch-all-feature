@@ -113,29 +113,22 @@
 	    maximize (length (car elem)))
       0))
 
-(defun notmuch-hello-roundup (dividend divisor)
-  "Return the rounded up value of dividing `dividend' by `divisor'."
-  (+ (/ dividend divisor)
-     (if (> (% dividend divisor) 0) 1 0)))
-
-(defun notmuch-hello-reflect-generate-row (ncols nrows row list)
-  (let ((len (length list)))
-    (loop for col from 0 to (- ncols 1)
-	  collect (let ((offset (+ (* nrows col) row)))
-		    (if (< offset len)
-			(nth offset list)
-		      ;; Don't forget to insert an empty slot in the
-		      ;; output matrix if there is no corresponding
-		      ;; value in the input matrix.
-		      nil)))))
-
 (defun notmuch-hello-reflect (list ncols)
-  "Reflect a `ncols' wide matrix represented by `list' along the
-diagonal."
-  ;; Not very lispy...
-  (let ((nrows (notmuch-hello-roundup (length list) ncols)))
-    (loop for row from 0 to (- nrows 1)
-	  append (notmuch-hello-reflect-generate-row ncols nrows row list))))
+  "Reflect a `ncols' wide matrix `list' along diagonal."
+  (let* ((l (length list))
+         (brows (ceiling l ncols)) ;;#rows of new matrix
+         (bvector (make-vector l nil));;vector to be returned
+         offset)
+    (dotimes (pos l)
+      (aset bvector pos
+	    (elt list (setq offset
+                            (cond ;;return row number if in first colum
+                             ((eq 0 (% pos ncols))
+                              (setq offset (floor pos ncols)))
+                             ((>= (% l ncols) (% pos ncols))
+                              (+ offset brows)) ;;add brows for first 'long'cols
+                             (t (1- (+ offset brows)))))))) ;;+ brows-1 for remainder
+    (append bvector nil)));; return bvector as list
 
 (defun notmuch-hello-widget-search (widget &rest ignore)
   (notmuch-search (widget-get widget
