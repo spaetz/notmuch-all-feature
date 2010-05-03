@@ -203,6 +203,7 @@ diagonal."
   (notmuch-hello-update t))
 
 (defun notmuch-hello-update (&optional no-display)
+  "Update the current notmuch view."
   ;; Lazy - rebuild everything.
   (interactive)
   (notmuch-hello no-display))
