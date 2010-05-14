@@ -174,16 +174,14 @@ For a mouse binding, return nil."
       (setq beg (match-end 0)))
     doc))
 
-(defun notmuch-help ()
+(defun notmuch-help (&optional mode)
   "Display help for the current notmuch mode."
   (interactive)
-  (let* ((mode major-mode)
-	 (doc (substitute-command-keys (notmuch-substitute-command-keys (documentation mode t)))))
-    (with-current-buffer (generate-new-buffer "*notmuch-help*")
-      (insert doc)
-      (goto-char (point-min))
-      (set-buffer-modified-p nil)
-      (view-buffer (current-buffer) 'kill-buffer-if-not-modified))))
+  (let ((mode (or mode major-mode)))
+    (help-setup-xref `(notmuch-help ,mode) (interactive-p))
+    (with-help-window (help-buffer)
+      (princ (substitute-command-keys
+              (notmuch-substitute-command-keys (documentation mode t)))))))
 
 (defcustom notmuch-search-hook '(hl-line-mode)
   "List of functions to call when notmuch displays the search results."
