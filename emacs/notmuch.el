@@ -317,16 +317,19 @@ number of matched messages and total messages in the thread,
 participants in the thread, a representative subject line, and
 any tags).
 
-Pressing \\[notmuch-search-show-thread] on any line displays that thread. The '\\[notmuch-search-add-tag]' and '\\[notmuch-search-remove-tag]'
-keys can be used to add or remove tags from a thread. The '\\[notmuch-search-archive-thread]' key
+Pressing \\[notmuch-search-show-thread] on any line displays that
+thread. The '\\[notmuch-search-add-tag]' and
+'\\[notmuch-search-remove-tag]' keys can be used to add or remove
+tags from a thread. The '\\[notmuch-search-archive-thread]' key
 is a convenience for archiving a thread (removing the \"inbox\"
-tag). The '\\[notmuch-search-operate-all]' key can be used to add or remove a tag from all
-threads in the current buffer.
+tag). The '\\[notmuch-search-operate-all]' key can be used to add
+or remove a tag from all threads in the current buffer.
 
-Other useful commands are '\\[notmuch-search-filter]' for filtering the current search
-based on an additional query string, '\\[notmuch-search-filter-by-tag]' for filtering to include
-only messages with a given tag, and '\\[notmuch-search]' to execute a new, global
-search.
+Other useful commands are '\\[notmuch-search-filter]' for
+filtering the current search based on an additional query string,
+'\\[notmuch-search-filter-by-tag]' for filtering to include only
+messages with a given tag, and '\\[notmuch-search]' to execute a
+new, global search.
 
 Complete list of currently available key bindings:
 
