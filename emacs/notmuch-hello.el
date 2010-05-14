@@ -215,7 +215,8 @@ diagonal."
 
 
 (defvar notmuch-hello-mode-map
-  (let ((map (copy-keymap widget-keymap)))
+  (let ((map (make-sparse-keymap)))
+    (set-keymap-parent map widget-keymap)
     (define-key map "v" '(lambda () "Display the notmuch version" (interactive)
                            (message "notmuch version %s" (notmuch-version))))
     (define-key map "?" 'notmuch-help)
